@@ -61,8 +61,9 @@ class MLECounter:
         if denominator <= 0:
             return 0
 
-        numerator = self._word_tag_counter[word][tag]
-        if numerator <= 0:
+        if self._word_counter[word] > 0:
+            numerator = self._word_tag_counter[word][tag]
+        else:
             signature = self._match_unknown_word(word)
             numerator = self._unknown_word_tag_counter[signature][tag]
 
@@ -168,5 +169,5 @@ class MLECounter:
         weight_sum = sum(w)
         self._w = (w[0] / weight_sum, w[1] / weight_sum, w[2] / weight_sum)
 
-    def get_score(self, words, i, tag, prev_tag, prev_prev_tag):
+    def get_score(self, words, i, tag, prev_tag = START_TAG, prev_prev_tag = START_TAG):
         return self._get_score(words[i], tag, prev_tag, prev_prev_tag)
