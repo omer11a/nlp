@@ -2,7 +2,10 @@
 
 import sys
 import re
+import collections
 import sklearn.feature_extraction
+
+import memm
 
 def main(input_filename, feature_vector_filename, feature_map_filename):
     tags = []
@@ -20,6 +23,12 @@ def main(input_filename, feature_vector_filename, feature_map_filename):
             features = dict(description.split('=') for description in feature_descriptions)
             examples.append(features)
 
+    possible_tags_per_word = collections.defaultdict(set)
+    for i, example in enumerate(examples):
+        if memm.WORD_FEATURE in example:
+            word = example[memm.WORD_FEATURE]
+            possible_tags_per_word[word].add(tags[i])
+
     vectorizer = sklearn.feature_extraction.DictVectorizer()
     matrix = vectorizer.fit_transform(examples)
 
@@ -36,6 +45,9 @@ def main(input_filename, feature_vector_filename, feature_map_filename):
 
         for feature, index in vectorizer.vocabulary_.items():
             feature_map_file.write('%s %d\n' % (feature, index))
+
+        for word, tags in possible_tags_per_word.items():
+            feature_map_file.write('%s/%s\n' % (word, ' '.join(tags)))
 
 if __name__ == '__main__':
     main(*sys.argv[1:])

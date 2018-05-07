@@ -2,44 +2,45 @@ import collections
 
 import recipes
 
+WORD_FEATURE = 'word'
+
+def get_pos_paper_features(sequence, i):
+    general_features = {}
+    common_word_features = {}
+    rare_word_features = {}
+
+    words, tags = zip(*sequence)
+    word = words[i]
+
+    common_word_features[WORD_FEATURE] = word
+
+    for n in range(1, min(4, len(word)) + 1):
+        rare_word_features['prefix' + str(n)] = word[:n]
+        rare_word_features['suffix' + str(n)] = word[-n:]
+
+    rare_word_features['contains-number'] = any(char.isdigit() for char in word)
+    rare_word_features['contains-upper'] = any(char.isupper() for char in word)
+    rare_word_features['contains-hyphen'] = '-' in word
+
+    general_features['prev-tag'] = tags[i - 1]
+    general_features['prev-prev-tag'] = '%s %s' % (tags[i - 2], tags[i -1])
+
+    general_features['prev-word'] = words[i - 1]
+    general_features['prev-prev-word'] = words[i - 2]
+    general_features['next-word'] = words[i + 1]
+    general_features['next-next-word'] = words[i + 2]
+
+    common_word_features.update(general_features)
+    rare_word_features.update(general_features)
+
+    return (common_word_features, rare_word_features)
+
 class FeatureExtractor():
     START_TAG = 'START'
     END_TAG = 'END'
     DEFAULT_PREV_WINDOW_SIZE = 2
     DEFAULT_NEXT_WINDOW_SIZE = 2
     DEFAULT_THRESHOLD = 1
-
-    @staticmethod
-    def _get_features(sequence, i):
-        general_features = {}
-        common_word_features = {}
-        rare_word_features = {}
-
-        words, tags = zip(*sequence)
-        word = words[i]
-
-        common_word_features['word'] = word
-
-        for n in range(1, min(4, len(word)) + 1):
-            rare_word_features['prefix' + str(n)] = word[:n]
-            rare_word_features['suffix' + str(n)] = word[-n:]
-
-        rare_word_features['contains-number'] = any(char.isdigit() for char in word)
-        rare_word_features['contains-upper'] = any(char.isupper() for char in word)
-        rare_word_features['contains-hyphen'] = '-' in word
-
-        general_features['prev-tag'] = tags[i - 1]
-        general_features['prev-prev-tag'] = '%s %s' % (tags[i - 2], tags[i -1])
-
-        general_features['prev-word'] = words[i - 1]
-        general_features['prev-prev-word'] = words[i - 2]
-        general_features['next-word'] = words[i + 1]
-        general_features['next-next-word'] = words[i + 2]
-
-        common_word_features.update(general_features)
-        rare_word_features.update(general_features)
-
-        return (common_word_features, rare_word_features)
 
     def _update_features_by_phrase(self, tagged_phrase):
         start = (('', type(self).START_TAG), ) * self._prev_window_size
@@ -59,7 +60,7 @@ class FeatureExtractor():
         self._prev_window_size = prev_window_size
         self._next_window_size = next_window_size
         self._window_size = prev_window_size + 1 + next_window_size
-        self._get_features = self._get_features if get_features is None else get_features
+        self._get_features = get_pos_paper_features if get_features is None else get_features
 
         self._word_counter = collections.Counter()
         self._words = []
