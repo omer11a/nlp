@@ -20,7 +20,7 @@ class FeatureExtractor():
 
         common_word_features['word'] = word
 
-        for n in range(1, len(word) + 1):
+        for n in range(1, min(4, len(word)) + 1):
             rare_word_features['prefix' + str(n)] = word[:n]
             rare_word_features['suffix' + str(n)] = word[-n:]
 
@@ -84,15 +84,4 @@ class FeatureExtractor():
                     features = self._rare_word_examples[i]
 
                 feature_summary = ' '.join('{}={}'.format(name, value) for name, value in features.items())
-                output_file.write('{} {}\n '.format(self._tags[i], feature_summary))
-
-    def load(self, filename):
-        with open(filename, 'r') as input_file:
-            for i, word in enumerate(self._words):
-                features = self._common_word_examples[i]
-                if self._word_counter[word] <= threshold:
-                    features = self._rare_word_examples[i]
-
-                feature_summary = ' '.join('{}={}'.format(name, value) for name, value in features.items())
-                output_file.write('{} {}\n '.format(self._tags[i], feature_summary))
-re.findall(r'[\w-]+=[^=]*(?=[ \n]?)', line)
+                output_file.write('{} {}\n'.format(self._tags[i], feature_summary))
