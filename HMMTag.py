@@ -6,6 +6,8 @@ import sys
 from collections import namedtuple
 import operator
 import math
+import time
+
 
 def GetWordTagset(word, tag_dict, tagset):
     if word in tag_dict:
@@ -19,26 +21,39 @@ def Viterbi(sentence, get_score, tagset, tag_dict):
     V = [{} for i in range(len(words))]
     bp = [{} for i in range(len(words))]
 
-    for r in tagset:
+    for r in GetWordTagset(words[0], tag_dict, tagset):
         V[0][Vkey('START', r)] = myfix(0, get_score(words, 0, r))
 
-    for r in tagset:
-        for t in tagset:
-            V[1][Vkey(t, r)] = myfix(V[0][Vkey('START', t)], get_score(words, 1, r, t))
+    if len(words) <= 1:
+        ret[len(words)-1] = max([(k, v) for (k, v) in V[len(words)-1].items()],
+                                                       key = operator.itemgetter(1))[0][1]
+        return '{0}/{1}'.format(words[0], ret[0])
+
+    for r in GetWordTagset(words[1], tag_dict, tagset):
+        for t in GetWordTagset(words[0], tag_dict, tagset):
+            V[1][Vkey(t, r)] = myfixfix(V[0][Vkey('START', t)], get_score, words, 1, r, t, 'START')
 
     for i in range(2, len(words)):
         for t in GetWordTagset(words[i-1], tag_dict, tagset):
             for r in GetWordTagset(words[i], tag_dict, tagset):
-                bp[i][Vkey(t, r)], V[i][Vkey(t, r)] = max([(tt,  myfix(V[i-1][Vkey(tt, t)], get_score(words, i, r, t, tt)))
+                bp[i][Vkey(t, r)], V[i][Vkey(t, r)] = max([(tt,  myfixfix(V[i-1][Vkey(tt, t)], get_score, words, i, r, t, tt))
                                                        for tt in GetWordTagset(words[i-2], tag_dict, tagset)], key = operator.itemgetter(1))
 
     ret[len(words) - 2], ret[len(words) - 1] = max([(k, v) for (k, v) in V[len(words)-1].items()],
                                                    key = operator.itemgetter(1))[0]
-
     for i in range(len(words) - 3, -1, -1):
         ret[i] = bp[i + 2][Vkey(ret[i + 1], ret[i + 2])]
+
     word_tag_tuple = zip(words,ret)
     return ' '.join(('{0}/{1}'.format(word, tag) for (word, tag) in word_tag_tuple))
+
+def myfixfix(x, get_score, words, i, r, t, tt):
+    if x == -math.inf:
+        return -math.inf
+    y = get_score(words, i, r, t, tt)
+    if y == 0:
+        return -math.inf
+    return x + math.log(y)
 
 def myfix(x,y):
     if x == -math.inf or y == 0:
@@ -47,6 +62,7 @@ def myfix(x,y):
         return x+math.log(y)
 
 def main(input_file_name, q_mle_filename, e_mle_filename, out_file_name, extra_file_name):
+    start = time.time()
     counter = hmm.MLECounter(unknown_word_regexes=patterns.ENGLISH_PATTERNS)
     counter.update_by_q_summary(open(q_mle_filename, 'r').read())
     counter.update_by_e_summary(open(e_mle_filename, 'r').read())
@@ -54,6 +70,8 @@ def main(input_file_name, q_mle_filename, e_mle_filename, out_file_name, extra_f
 
     tagged_document = (Viterbi(line, counter.get_score, counter.tagset, counter.possible_tags_per_word) for line in open(input_file_name, 'r').readlines())
     open(out_file_name, 'w').write('\n'.join(tagged_document))
+    end = time.time()
+    print(end-start)
 
 if __name__ == '__main__':
      main(*sys.argv[1:])
