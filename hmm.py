@@ -15,6 +15,9 @@ class MLECounter:
             sequences = recipes.window(tags_with_start_tokens, n)
             self._tag_sequence_counter.update(sequences)
 
+    def _update_word_count(self):
+        self._word_count = sum(self._word_counter.values())
+
     def _match_unknown_word(self, word):
         for signature, pattern in self._unknown_word_patterns.items():
             if pattern.fullmatch(word) is not None:
@@ -31,7 +34,7 @@ class MLECounter:
 
     def _get_tag_sequence_count(self, tags):
         if len(tags) == 0:
-            return sum(self._word_counter.values())
+            return self._word_count
 
         return self._tag_sequence_counter[tuple(tags)]
 
@@ -75,6 +78,7 @@ class MLECounter:
     def __init__(self, unknown_word_regexes=None, w=None):
         self._tagset = set()
 
+        self._word_count = 0
         self._word_counter = collections.Counter()
         self._tag_sequence_counter = collections.Counter()
         self._word_tag_counter = collections.defaultdict(collections.Counter)
@@ -118,6 +122,8 @@ class MLECounter:
                 self._word_tag_counter[word].update((tag, ))
                 self._possible_tags_per_word[word].add(tag)
 
+        self._update_word_count()
+
     def update_uncommon(self, threshold=DEFAULT_THRESHOLD):
         uncommon_words = [word for word, count in self._word_counter.items() if count <= threshold]
         for word in uncommon_words:
@@ -153,6 +159,8 @@ class MLECounter:
                 self._word_counter[word] += count
                 self._word_tag_counter[word][tag] += count
                 self._possible_tags_per_word[word].add(tag)
+
+        self._update_word_count()
 
     def learn_weights(self):
         w = [0, 0, 0]
