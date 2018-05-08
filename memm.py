@@ -4,23 +4,13 @@ import recipes
 
 WORD_FEATURE = 'word'
 
-def get_pos_paper_features(sequence, i):
+def get_pos_paper_features(sequence, i, is_rare=None):
     general_features = {}
     common_word_features = {}
     rare_word_features = {}
 
     words, tags = zip(*sequence)
     word = words[i]
-
-    common_word_features[WORD_FEATURE] = word
-
-    for n in range(1, min(4, len(word)) + 1):
-        rare_word_features['prefix' + str(n)] = word[:n]
-        rare_word_features['suffix' + str(n)] = word[-n:]
-
-    rare_word_features['contains-number'] = any(char.isdigit() for char in word)
-    rare_word_features['contains-upper'] = any(char.isupper() for char in word)
-    rare_word_features['contains-hyphen'] = '-' in word
 
     general_features['prev-tag'] = tags[i - 1]
     general_features['prev-prev-tag'] = '%s %s' % (tags[i - 2], tags[i -1])
@@ -30,10 +20,27 @@ def get_pos_paper_features(sequence, i):
     general_features['next-word'] = words[i + 1]
     general_features['next-next-word'] = words[i + 2]
 
-    common_word_features.update(general_features)
-    rare_word_features.update(general_features)
+    if is_rare is not True:
+        common_word_features[WORD_FEATURE] = word
+        common_word_features.update(general_features)
 
-    return (common_word_features, rare_word_features)
+    if is_rare is not False:
+        for n in range(1, min(4, len(word)) + 1):
+            rare_word_features['prefix' + str(n)] = word[:n]
+            rare_word_features['suffix' + str(n)] = word[-n:]
+
+        rare_word_features['contains-number'] = any(char.isdigit() for char in word)
+        rare_word_features['contains-upper'] = any(char.isupper() for char in word)
+        rare_word_features['contains-hyphen'] = '-' in word
+
+        rare_word_features.update(general_features)
+
+    if is_rare is None:
+        return (common_word_features, rare_word_features)
+    elif is_rare:
+        return rare_word_features
+    else:
+        return common_word_features
 
 class FeatureExtractor():
     START_TAG = 'START'
@@ -47,7 +54,7 @@ class FeatureExtractor():
         end = (('', type(self).END_TAG), ) * self._next_window_size
         tagged_phrase_with_boundries = start + tagged_phrase + end
         for sequence in recipes.window(tagged_phrase_with_boundries, self._window_size):
-            common_word_features, rare_word_features = type(self)._get_features(sequence, self._prev_window_size)
+            common_word_features, rare_word_features = self._get_features(sequence, self._prev_window_size)
             self._common_word_examples.append(common_word_features)
             self._rare_word_examples.append(rare_word_features)
 
