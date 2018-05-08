@@ -1,8 +1,11 @@
+import os
+import os.path
 import collections
 
 import recipes
 
 WORD_FEATURE = 'word'
+LEXICON_DIR_PATH = 'lexicon'
 
 def get_pos_paper_features(sequence, i, is_rare=None):
     general_features = {}
@@ -41,6 +44,31 @@ def get_pos_paper_features(sequence, i, is_rare=None):
         return rare_word_features
     else:
         return common_word_features
+
+def get_ner_features(sequence, i, is_rare=None):
+    words, _ = zip(*sequence)
+    words = [word.lower() for word in words]
+
+    features = {}
+    for root, dirs, filenames in os.walk(LEXICON_DIR_PATH):
+        for filename in filenames:
+            for line in open(os.path.join(root, filename), 'r'):
+                words_in_line = line.split()
+                if words[i] in words_in_line:
+                    j = words_in_line.index(words[i])
+
+                    start = max(j - 2, 0)
+                    end = min(j + 2, len(words_in_line) - 1)
+                    for k in range(start, end + 1):
+                        features[filename + str(k - j)] = words_in_line[k] == words[i + k - j]
+
+    if is_rare is not None:
+        return get_pos_paper_features(sequence, i, is_rare).update(features)
+
+    common_word_features, rare_word_features = get_pos_paper_features(sequence, i, is_rare)
+    common_word_features.update(features)
+    rare_word_features.update(features)
+    return common_word_features, rare_word_features
 
 class FeatureExtractor():
     START_TAG = 'START'
