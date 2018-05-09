@@ -45,6 +45,19 @@ def get_pos_paper_features(sequence, i, is_rare=None):
     else:
         return common_word_features
 
+def does_line_match(words, i, line):
+    words_in_line = line.lower().split()
+    if words[i] not in words_in_line:
+        return False
+
+    j = words_in_line.index(words[i])
+    start = max(j - 2, 0)
+    end = min(j + 2, len(words_in_line) - 1)
+    return all(
+        words_in_line[k] == words[i + k - j]
+        for k in range(start, end + 1)
+    )
+
 def get_ner_features(sequence, i, is_rare=None):
     words, _ = zip(*sequence)
     words = [word.lower() for word in words]
@@ -52,15 +65,9 @@ def get_ner_features(sequence, i, is_rare=None):
     features = {}
     for root, dirs, filenames in os.walk(LEXICON_DIR_PATH):
         for filename in filenames:
-            for line in open(os.path.join(root, filename), 'r'):
-                words_in_line = line.split()
-                if words[i] in words_in_line:
-                    j = words_in_line.index(words[i])
-
-                    start = max(j - 2, 0)
-                    end = min(j + 2, len(words_in_line) - 1)
-                    for k in range(start, end + 1):
-                        features[filename + str(k - j)] = words_in_line[k] == words[i + k - j]
+            lexicon = open(os.path.join(root, filename), 'r')
+            if any(does_line_match(words, i, line) for line in lexicon):
+                features[filename] = True
 
     if is_rare is not None:
         return get_pos_paper_features(sequence, i, is_rare).update(features)
