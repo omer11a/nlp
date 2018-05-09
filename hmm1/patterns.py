@@ -66,6 +66,8 @@ ENGLISH_PATTERNS = {
     '^starts-with-uni' : '[Uu]ni.*',
     '^starts-with-un' : '[Uu]n.*',
     '^starts-with-upper-and-lower-cases' : '[A-Z][a-z].*',
+    '^all-uper-case' : '[A-Z]+',
     '^number' : '[\d\.]*',
     '^contains-number' : '.*\d.*',
+    '^contains-hyphen' : '.*-.*',
 }
