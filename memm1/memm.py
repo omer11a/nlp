@@ -5,7 +5,7 @@ import collections
 import recipes
 
 WORD_FEATURE = 'word'
-LEXICON_DIR_PATH = 'lexicon'
+DEFAULT_LEXICON_DIRECTORY_NAME = 'lexicon'
 
 def get_pos_paper_features(sequence, i, is_rare=None):
     general_features = {}
@@ -45,6 +45,14 @@ def get_pos_paper_features(sequence, i, is_rare=None):
     else:
         return common_word_features
 
+def load_lexicons(directory_name=DEFAULT_LEXICON_DIRECTORY_NAME):
+    lexicons = os.listdir(directory_name)
+
+    return {
+        lexicon : open(os.path.join(directory_name, lexicon), 'r').read().lower().splitlines()
+        for lexicon in lexicons
+    }
+
 def does_line_match(words, i, line):
     words_in_line = line.lower().split()
     if words[i] not in words_in_line:
@@ -58,16 +66,14 @@ def does_line_match(words, i, line):
         for k in range(start, end + 1)
     )
 
-def get_ner_features(sequence, i, is_rare=None):
+def get_ner_features(lexicons, sequence, i, is_rare=None):
     words, _ = zip(*sequence)
     words = [word.lower() for word in words]
 
     features = {}
-    for root, dirs, filenames in os.walk(LEXICON_DIR_PATH):
-        for filename in filenames:
-            lexicon = open(os.path.join(root, filename), 'r')
-            if any(does_line_match(words, i, line) for line in lexicon):
-                features[filename] = True
+    for lexicon, lines in lexicons.items():
+        if any(does_line_match(words, i, line) for line in lines):
+            features[lexicon] = True
 
     if is_rare is not None:
         return get_pos_paper_features(sequence, i, is_rare).update(features)
